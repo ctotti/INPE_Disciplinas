@@ -1,4 +1,6 @@
 # ======================= CLASSIFICAÇÃO RANDOM FOREST DE USO E COBERTURA DA TERRA =========================================
+# -------------- PREDIÇÃO E PREPARAÇÃO PARA APLICAÇÃO COM COMPOUND MAXIMUM A PRIORI (CMAP) --------------------------------
+
 # 1 - IMPORTANDO E PREPARANDO DADOS
 # 2 - PROCESSANDO RASTER (SpatRaster) 
 # 3 - PROCESSANDO SHAPEFILE (Simple feature collection)
@@ -9,10 +11,11 @@ library(sf)                               # arquivos vetoriais
 library(terra)                            # arquivos matriciais
 library(magrittr)
 library(tidyverse)
+library(dplyr)
 library(mapview)
 library(randomForest)
 library(caret)
-# library(stars)
+library(ggplot2)
 # library(MetBrewer)
 # library(colorspace)
 # library(rayshader)
@@ -20,15 +23,15 @@ library(caret)
 
 # ============================== IMPORTANDO E PREPARANDO DADOS ============================================================
 # Importar os raster e shapefile  -----------------------------------------------------------------------------------------
-S2        <- terra::rast('Dados_Entrada/imgSentinel2_RF.tif')
-amostras  <- sf::read_sf('Dados_Entrada/amostra_preliminar_3/amostra_preliminar_3.shp')
+S2        <- terra::rast('SER-413 PDI/Dados_Entrada/imgSentinel2_RF.tif')
+amostras  <- sf::read_sf('SER-413 PDI/Dados_Entrada/amostra_preliminar_3/amostra_preliminar_3.shp')
 
 # Reprojetar amostras para o CRS do raster, se necessário
 if (st_crs(amostras) != crs(S2)) {
   amostras <- sf::st_transform(amostras, crs(S2))
 }
 
-# plotRGB(S2, 4,3,2, stretch='lin')
+plotRGB(S2, 4,3,2, stretch='lin')                                  # plota o raster com composição verdadeira
 
 # =============================== PROCESSANDO RASTER ======================================================================
 # Transformando raster em df ----------------------------------------------------------------------------------------------
@@ -56,6 +59,13 @@ nomes_bandas <- names(S2)
 # Convertendo raster S2 em df
 S2_df <- img2df(S2, band_names = nomes_bandas)
 
+# Adicionando colunas vazias 'ID' e 'ID_Classe' ao dataframe 'S2_df'
+# para correspondencia com df dos pixels que serão amostrados
+S2_df <- S2_df %>%
+  mutate(ID = numeric(n()),       # Adiciona coluna numérica vazia
+         ID_Classe = factor(NA))  # Adiciona coluna fator vazia
+
+
 # =============================== PROCESSANDO SHAPEFILE ====================================================================
 # Separar MULTIPOLYGON em POLYGON ------------------------------------------------------------------------------------------
 amostras_separadas <- amostras %>%
@@ -66,7 +76,7 @@ extrair_pix <- function(poligono, raster) {
   # Extrair valores de pixels dentro do polígono
   valores <- terra::extract(raster, poligono, df = TRUE)
   
-  # Adicionar ID_Classe ao datafrae resultante
+  # Adicionar ID_Classe ao dataframe resultante
   valores$ID_Classe <- poligono$ID_Classe
   return(valores)
 } 
@@ -85,11 +95,14 @@ amostras <- amostras %>%
 # Configurar uma semente para reprodutibilidade 
 set.seed(123)
 
-# Convertendo ID_Classe para fator
+# Convertendo ID_Classe para 'fator'
+# Garante que o randomForest() entenda os valores de 'ID_Classe' como valores discretos e não contínuos
 pixels_amostrados$ID_Classe <- as.factor(pixels_amostrados$ID_Classe)
 
 # Criar uma partição estratificada
-trainIndex <- createDataPartition(pixels_amostrados$ID_Classe, p = 0.7, list = FALSE)
+trainIndex <- createDataPartition(pixels_amostrados$ID_Classe, 
+                                  p = 0.7,                            # p define a porcentagem dos dados para treinamento
+                                  list = FALSE)
 
 # Dividir os dados em treinamento e validação
 train_data <- pixels_amostrados[trainIndex, ]
@@ -100,29 +113,71 @@ bandasRF <- c('B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'TCI', 'EVI'
 
 # Selecionar as colunas desejadas para o dataframe de validação e treinamento ----------------------------------------------
 train_data_bandasRF <- train_data %>%
-  select(all_of(bandasRF))
+  dplyr::select(all_of(bandasRF))
 
 test_data_bandasRF <- test_data %>%
-  select(all_of(bandasRF))
+  dplyr::select(all_of(bandasRF))
 
-# Treinar o modelo Random Forest -------------------------------------------------------------------------------------------
+# Treinamento, predição e avaliação do modelo Random Forest ----------------------------------------------------------------
+# Treinar o modelo Random Forest
 rf_model <- randomForest(ID_Classe ~ ., data = train_data_bandasRF, ntree = 100, importance = TRUE)
 
 # Fazer previsões (classificar)
-predictions <- predict(rf_model, test_data_bandasRF)
+predictions <- predict(rf_model, test_data_bandasRF)       # Aplica para df de teste
+# predictions <- predict(rf_model, S2_df)                      # Aplica para imagem inteira
 
-# Adicionar previsões ao dataframe de teste
+# Adicionar previsões ao dataframe
 test_data_bandasRF$Predictions <- predictions
+# S2_df$Predictions <- predictions                    
 
 # Avaliar o modelo
 conf_matrix <- confusionMatrix(test_data_bandasRF$Predictions, test_data_bandasRF$ID_Classe)
+# conf_matrix <- confusionMatrix(S2_df$Predictions, S2_df$ID_Classe)
+
 print(conf_matrix)
 
-
+# Obtendo porcentagem de votos de cada árvore para cada classe ------------------------------------------------------------
 #PORCENTAGEM DE VOTOS
 votes <- predict(rf_model, test_data_bandasRF, type = "vote")
 votes_df <- as.data.frame(votes)
 
-# df <- cbind(df, votes_df) # CASO QUEIRA JUNTAR NO ORIGINAL
-
 head(votes_df)
+
+# ==================== CONVERTENDO DATAFRAME CLASSIFICADO PARA O FORMATO RASTER ===========================================
+# Função de conversão de dataframe para raster [Vinícius] -.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.
+df2img <- function(df_img, image) {
+  # Extrair dimensões da imagem de referência
+  nrows <- dim(image)[1]
+  ncols <- dim(image)[2]
+  nbands <- ncol(df_img)  # Número de colunas no dataframe indica o número de bandas
+  
+  # Verificar se temos apenas uma banda
+  if (nbands == 1) {
+    data_vector <- as.vector(as.numeric(df_img[[1]]))
+    
+    # Criar o RasterLayer
+    img_f <- raster(nrows=nrows, ncols=ncols)  # Inicializa um RasterLayer vazio
+    values(img_f) <- data_vector               # Preenche o RasterLayer com valores
+    extent(img_f) <- extent(image)             # Define a mesma extensão da imagem de referência
+    projection(img_f) <- crs(image)            # Define o mesmo CRS da imagem de referência
+    
+  } else {
+    # Tratar como array tridimensional para múltiplas bandas
+    array_t <- array(0, dim = c(nrows, ncols, nbands))
+    # Preencher o array com os dados de cada banda
+    for (i in 1:nbands) {
+      array_t[,,i] <- matrix(df_img[[i]], nrow = nrows, ncol = ncols, byrow = TRUE)
+    }
+    # Criar um RasterBrick
+    img_f <- brick(array_t)
+    projection(img_f) <- crs(image)
+    extent(img_f) <- extent(image)
+    crs(img_f) <- crs(image)
+  }
+  
+  return(img_f)
+}
+
+# Convertendo dataframe para raster
+votes_img <- df2img(votes_df, image = S2)
+votes_img
