@@ -133,7 +133,9 @@ rf_model <- randomForest(ID_Classe ~ ., data = train_data_bandasRF, ntree = 100,
 
 # Fazer previsões (classificar)
 # predictions <- predict(rf_model, test_data_bandasRF)       # Aplica para df de teste
-predictions <- predict(rf_model, S2_df_bandasRF)                    # Aplica para imagem inteira
+# predictions <- predict(rf_model, S2_df_bandasRF)                    # Aplica para imagem inteira
+predictions <- predict(S2, rf_model)                    # Aplica para imagem inteira (troca imagem pelo modelo)
+predictions_raster <-raster::predict(rf_model, S2, progress = "text", type = "response")
 
 # Adicionar previsões ao dataframe
 # test_data_bandasRF$Predictions <- predictions
@@ -141,9 +143,11 @@ S2_df_bandasRF$Predictions <- predictions
 
 # Avaliar o modelo
 # conf_matrix <- confusionMatrix(test_data_bandasRF$Predictions, test_data_bandasRF$ID_Classe)
-conf_matrix <- confusionMatrix(data = S2_df_bandasRF$Predictions, reference = S2_df_bandasRF$ID_Classe)
+# conf_matrix <- confusionMatrix(data = S2_df_bandasRF$Predictions, reference = S2_df_bandasRF$ID_Classe)
+conf_matrix <- confusionMatrix(data = predictions_raster, reference = test_data_bandasRF$ID_Classe)
 
 print(conf_matrix)
+
 
 # Obtendo porcentagem de votos de cada árvore para cada classe ------------------------------------------------------------
 # PORCENTAGEM DE VOTOS [Vinicius]
