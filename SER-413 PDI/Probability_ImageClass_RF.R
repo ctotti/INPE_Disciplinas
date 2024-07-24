@@ -61,9 +61,12 @@ S2_df <- img2df(S2, band_names = nomes_bandas)
 
 # Adicionando colunas vazias 'ID' e 'ID_Classe' ao dataframe 'S2_df'
 # para correspondencia com df dos pixels que serão amostrados
+# Definindo os níveis desejados como 1, 2, 3, 4, 5
+nivels_desejados <- c(1, 2, 3, 4, 5)
+
 S2_df <- S2_df %>%
   mutate(ID = numeric(n()),       # Adiciona coluna numérica vazia
-         ID_Classe = factor(NA))  # Adiciona coluna fator vazia
+         ID_Classe = factor(NA, levels = nivels_desejados))  # Adiciona coluna fator vazia
 
 
 # =============================== PROCESSANDO SHAPEFILE ====================================================================
@@ -93,7 +96,7 @@ amostras <- amostras %>%
   mutate(area_percent = (area_km2 / sum(area_km2) * 100))
 
 # ================================ RANDOM FOREST ===========================================================================
-# Dividindo os Pixels Amostrados em Conjuntos de Treinamento e Validação ----------------------------------------------------
+# Dividindo os Pixels Amostrados em Conjuntos de Treinamento e Validação ---------------------------------------------------
 # Configurar uma semente para reprodutibilidade 
 set.seed(123)
 
@@ -138,7 +141,7 @@ S2_df_bandasRF$Predictions <- predictions
 
 # Avaliar o modelo
 # conf_matrix <- confusionMatrix(test_data_bandasRF$Predictions, test_data_bandasRF$ID_Classe)
-conf_matrix <- confusionMatrix(S2_df_bandasRF$Predictions, S2_df_bandasRF$ID_Classe)
+conf_matrix <- confusionMatrix(data = S2_df_bandasRF$Predictions, reference = S2_df_bandasRF$ID_Classe)
 
 print(conf_matrix)
 
@@ -150,7 +153,7 @@ votes_df <- as.data.frame(votes)
 head(votes_df)
 
 # ==================== CONVERTENDO DATAFRAME CLASSIFICADO PARA O FORMATO RASTER ===========================================
-# Função de conversão de dataframe para raster [Vinícius] -.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.
+# Função de conversão de dataframe para raster [Vinícius] -.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-
 df2img <- function(df_img, image) {
   # Extrair dimensões da imagem de referência
   nrows <- dim(image)[1]

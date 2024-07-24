@@ -180,7 +180,6 @@ if (num_files == 0) {
   dados_amostras <- st_drop_geometry(amostras_f)
   
   # Unir a informacao da classe da amostra com os valores dos atributos
-  
   amostras_atributos <- data.frame(Classe = dados_amostras$id, atributos_amostras)
   
   
@@ -191,7 +190,6 @@ if (num_files == 0) {
 amostras_atributos$Classe = as.factor(amostras_atributos$Classe)  
   
 # Amostras de Treino e Teste
-  
 set.seed(12) 
 
 split.treino <- sample.split(amostras_atributos$Classe, SplitRatio = 0.7)
@@ -202,7 +200,6 @@ teste.rf <- amostras_atributos[split.treino == F, ]
 
 
 # modelo
-
 RF_modelo = randomForest(Classe~., ntree = 500, data = treino.rf, classProbs = TRUE)
 
 print(RF_modelo)
@@ -238,7 +235,6 @@ plot(oob_error)
   # 5 - PREDICT - Processo de Classificação
 
 # Calcular as previsões do modelo nos dados de teste (vai servir pra métricas de desempenho depois)
-  
 rf.class_fator <-raster::predict(RF_modelo_mtry, teste.rf, progress = "text", type = "response")
 
 
@@ -246,7 +242,6 @@ rf.class_fator <-raster::predict(RF_modelo_mtry, teste.rf, progress = "text", ty
 
 
 #Dá errado rf.class <- predict(RF_modelo_mtry, raster, progress = "text", type = "response")
-
 rf.class <- predict(Atributos, RF_modelo_mtry, progress = "text", type = "response")
 prob_RF <- stats::predict(RF_modelo_mtry, Atributos.df, type = "prob") #probabilidade de pixel
 
