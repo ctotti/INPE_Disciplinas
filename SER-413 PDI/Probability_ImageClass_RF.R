@@ -98,6 +98,7 @@ set.seed(123)
 # Convertendo ID_Classe para 'fator'
 # Garante que o randomForest() entenda os valores de 'ID_Classe' como valores discretos e não contínuos
 pixels_amostrados$ID_Classe <- as.factor(pixels_amostrados$ID_Classe)
+S2_df$ID_Classe <- as.factor(S2_df$ID_Classe)
 
 # Criar uma partição estratificada
 trainIndex <- createDataPartition(pixels_amostrados$ID_Classe, 
@@ -111,11 +112,14 @@ test_data <- pixels_amostrados[-trainIndex, ]
 # Definindo bandas que serão utilizadas no modelo RF -----------------------------------------------------------------------
 bandasRF <- c('B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'TCI', 'EVI','ID_Classe')
 
-# Selecionar as colunas desejadas para o dataframe de validação e treinamento ----------------------------------------------
+# Selecionar as colunas (bandas) desejadas para o dataframe de validação, treinamento e do raster original -----------------
 train_data_bandasRF <- train_data %>%
   dplyr::select(all_of(bandasRF))
 
 test_data_bandasRF <- test_data %>%
+  dplyr::select(all_of(bandasRF))
+
+S2_df_bandasRF <- S2_df %>%               
   dplyr::select(all_of(bandasRF))
 
 # Treinamento, predição e avaliação do modelo Random Forest ----------------------------------------------------------------
@@ -123,21 +127,21 @@ test_data_bandasRF <- test_data %>%
 rf_model <- randomForest(ID_Classe ~ ., data = train_data_bandasRF, ntree = 100, importance = TRUE)
 
 # Fazer previsões (classificar)
-predictions <- predict(rf_model, test_data_bandasRF)       # Aplica para df de teste
-# predictions <- predict(rf_model, S2_df)                      # Aplica para imagem inteira
+# predictions <- predict(rf_model, test_data_bandasRF)       # Aplica para df de teste
+predictions <- predict(rf_model, S2_df_bandasRF)                    # Aplica para imagem inteira
 
 # Adicionar previsões ao dataframe
-test_data_bandasRF$Predictions <- predictions
-# S2_df$Predictions <- predictions                    
+# test_data_bandasRF$Predictions <- predictions
+S2_df_bandasRF$Predictions <- predictions
 
 # Avaliar o modelo
-conf_matrix <- confusionMatrix(test_data_bandasRF$Predictions, test_data_bandasRF$ID_Classe)
-# conf_matrix <- confusionMatrix(S2_df$Predictions, S2_df$ID_Classe)
+# conf_matrix <- confusionMatrix(test_data_bandasRF$Predictions, test_data_bandasRF$ID_Classe)
+conf_matrix <- confusionMatrix(S2_df_bandasRF$Predictions, S2_df_bandasRF$ID_Classe)
 
 print(conf_matrix)
 
 # Obtendo porcentagem de votos de cada árvore para cada classe ------------------------------------------------------------
-#PORCENTAGEM DE VOTOS
+# PORCENTAGEM DE VOTOS [Vinicius]
 votes <- predict(rf_model, test_data_bandasRF, type = "vote")
 votes_df <- as.data.frame(votes)
 
