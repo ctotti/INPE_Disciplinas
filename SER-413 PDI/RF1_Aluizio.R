@@ -56,7 +56,6 @@ adjust_raster <- function(raster_path, reference, mask) {
 }
 
 # 2.1 Entropia
-
 shannon.entropy = function (prob_RF, raster.ref, path_entropy, samples_area, path_samples) {
   
   # Calcula a entropia do raster
@@ -90,7 +89,6 @@ amostras.entropy.sp = SpatialPointsDataFrame(amostras_atributos@coords, amostras
                                    
 
 # 2.2 Gera um raster com a proporcao de vezes que um pixel foi classificado como "Agua" considerando todas as arvores do RF.
-
 raster.ref <- (rf.class)
 proportion.agua = function (raster.ref, prob_RF, class.raster, path) {
   prob.agua = raster(raster.ref) #Empty raster created from another raster reference 
@@ -104,11 +102,9 @@ proportion.agua = function (raster.ref, prob_RF, class.raster, path) {
 # 3 -  ==== ATRIBUTOS ==== 
   
   # Ler pasta com os atributos
-  
 Atributos <- list.files(path = "D:\\Dissertação\\R\\RF1\\Atributos", pattern = ".tif", full.names = T)
   
   # Criar stack com os atributos
-  
 Atributos <- stack(Atributos)
 
   #Carregar rasters
@@ -172,14 +168,12 @@ if (num_files == 0) {
 #   4 -    ==== AMOSTRAGEM ==== 
     
 # um shp para cada classe na mesma pasta
-    
   amostras = list.files("D:\\Dissertação\\R\\RF1\\Amostragem", pattern = ".shp", full.names = T)
   amostras = lapply(amostras, st_read) #junta os .shp em uma lista
   amostras[[2]] <- st_transform(amostras[[2]], st_crs(amostras[[1]])) # Converter o CRS do segundo conjunto de dados para o CRS do primeiro
   amostras_f = rbind(amostras[[1]], amostras[[2]]) #combina em um ?nico vetor
   
   #Extrair valores dos raster para as amostras
-  
   atributos_amostras = raster::extract(Atributos, amostras_f)
   
   # Acessar apenas os dados em amostras_f

@@ -82,7 +82,9 @@ extrair_pix <- function(poligono, raster) {
 } 
 
 # Aplicar a função a cada polígono e combinar os resultados em um único dataframe
-pixels_amostrados <- do.call(rbind, lapply(1:nrow(amostras), function(i) extrair_pix(amostras[i, ], S2)))
+# pixels_amostrados <- do.call(rbind, lapply(1:nrow(amostras), function(i) extrair_pix(amostras[i, ], S2)))
+pixels_amostrados <- do.call(rbind, lapply(1:nrow(amostras_separadas), function(i) extrair_pix(amostras_separadas[i, ], S2)))
+
 
 # Calcular a área de cada polígono em m², km² e % --------------------------------------------------------------------------
 amostras <- amostras %>%
