@@ -7,13 +7,15 @@ library(devtools)
 devtools::install_github("vdlucas-queiroz/imageTools")
 
 # Importanto imagem 
-image_path <- 'G:/Meu Drive/INPE/projeto_dissertacao/9_artigo_pdi/imgSentinel2_RF.tif'
+# image_path <- 'G:/Meu Drive/INPE/projeto_dissertacao/9_artigo_pdi/imgSentinel2_RF.tif'
+image_path <- 'SER-413 PDI/Dados_Entrada/imgSentinel2_RF.tif'
 image <- brick(image_path)# /(10^-11.5)
 # names(image) <- c('HH','HV')
 image_df <- imageTools::img2df(image,names(image)) #imageTools - transformando imagens para dataframe
 
 # # Importando vetor (PONTOS)
-vector_path <- 'G:/Meu Drive/INPE/projeto_dissertacao/9_artigo_pdi/amostra_preliminar_3.shp'
+# vector_path <- 'G:/Meu Drive/INPE/projeto_dissertacao/9_artigo_pdi/amostra_preliminar_3.shp'
+vector_path <- 'SER-413 PDI/Dados_Entrada/amostra_preliminar_3/amostra_preliminar_3.shp'
 vectors <-  st_read(vector_path)
 
 # Extraindo os atributos do RasterBrick baseado na localização espacial do vetor
@@ -58,16 +60,15 @@ votes_df <- as.data.frame(votes) #transformação para dataframe
 
 # Imagens de procentagem de votos por classe
 image_voting <- imageTools::df2img(votes_df,image) #imageTools
-write_path <- "G:/Meu Drive/INPE/projeto_dissertacao/9_artigo_pdi/imagem_porcentagem_votos.TIF"
+# write_path <- "G:/Meu Drive/INPE/projeto_dissertacao/9_artigo_pdi/imagem_porcentagem_votos.TIF"
+write_path <- "SER-413 PDI/Dados_Saida/imagem_porcentagem_votos.TIF"
 writeRaster(image_voting, filename = write_path, format = "GTiff",overwrite=TRUE)
 
 # Classificação RF (Cobertura)
 image_classification <- imageTools::df2img(as.data.frame(image_df$prediction),image) #imageTools
-write_path <- "G:/Meu Drive/INPE/projeto_dissertacao/9_artigo_pdi/imagem_classificada_RF.TIF"
+# write_path <- "G:/Meu Drive/INPE/projeto_dissertacao/9_artigo_pdi/imagem_classificada_RF.TIF"
+write_path <- 'SER-413 PDI/Dados_Saida/imagem_classificada_RF.TIF'
 writeRaster(image_classification, filename = write_path, format = "GTiff",overwrite=TRUE)
-
-
-
 
 
 # Avaliação da classificação (TEM QUE IMPORTAR OUTRO CONJUNTO COMO TESTE...
