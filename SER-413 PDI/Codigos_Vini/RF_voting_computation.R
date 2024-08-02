@@ -45,7 +45,7 @@ test_data  <- df_samples[-split, ] #usar apenas para a avaliação do modelo
 
 # Criando modelo random forest
 #MODELO RF  (NESSE CASO 500 ÁRVORES = 500 VOTOS)
-rf_model <- randomForest(Class ~ ., data = train_data, ntree = 300, importance = TRUE)
+rf_model <- randomForest(Class ~ ., data = train_data, ntree = 252, importance = TRUE)
 print(rf_model) # Avaliação do MODELO RF.
 
 
@@ -84,5 +84,10 @@ test_data$prediction <- as.factor(test_data$prediction) #PREDIÇÃO E VERDADE DE
 confusion_matrix <- caret::confusionMatrix(test_data$Class,test_data$prediction)
 imageTools::metrics_calculation(confusion_matrix$table)
 
+print(conf_matrix)
+
+# Extrair a acurácia global
+accuracy <- conf_matrix$overall['Accuracy']
+print(accuracy)
 
 
